@@ -1,6 +1,6 @@
 package main
 
-import "github.com/bookstoreUsersApi/app"
+import "github.com/igson/bookstoreUsersApi/app"
 
 func main() {
 	app.StartApplication()

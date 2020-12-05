@@ -5,13 +5,11 @@ import (
 )
 
 var (
-	//Router xxx
-	Router = gin.Default()
+	router = gin.Default()
 )
 
 //StartApplication inicializa a aplicação
 func StartApplication() {
-	//mapUrls()
-	GerarRotas()
-	Router.Run(":8080")
+	mapUrls()
+	router.Run(":8080")
 }
