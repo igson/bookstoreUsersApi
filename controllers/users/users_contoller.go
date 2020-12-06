@@ -1,8 +1,10 @@
 package users
 
 import (
-	"fmt"
 	"net/http"
+	"strconv"
+
+	"github.com/igson/bookstoreUsersApi/utils/errors"
 
 	"github.com/igson/bookstoreUsersApi/services"
 
@@ -20,16 +22,15 @@ func CreateUser(c *gin.Context) {
 	var user users.User
 
 	if err := c.ShouldBindJSON(&user); err != nil {
-		//TODO: return a bad request to caller
-		fmt.Println(err.Error())
+		erroMessage := errors.NewBadRequestError("invalid json error body")
+		c.JSON(erroMessage.StatusCode, erroMessage)
 		return
 	}
 
-	createdUser, erroCreated := services.CreateUser(user)
+	createdUser, erro := services.CreateUser(user)
 
-	if erroCreated != nil {
-		//TODO: Handle user creation error
-		fmt.Println(erroCreated)
+	if erro != nil {
+		c.JSON(erro.StatusCode, erro)
 		return
 	}
 
@@ -39,7 +40,24 @@ func CreateUser(c *gin.Context) {
 
 // GetUser retorna o usuário pelo ID
 func GetUser(c *gin.Context) {
-	c.String(http.StatusNotImplemented, "Implemente-me")
+
+	userID, erro := strconv.ParseInt(c.Param("user_id"), 10, 64)
+
+	if erro != nil {
+		erroMessage := errors.NewBadRequestError("ID deve ser número")
+		c.JSON(erroMessage.StatusCode, erroMessage)
+		return
+	}
+
+	user, erroGerUser := services.GetUser(userID)
+
+	if erroGerUser != nil {
+		c.JSON(erroGerUser.StatusCode, erroGerUser)
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+
 }
 
 // SearchUser realiza a busca de um usuário
