@@ -18,6 +18,15 @@ func NewBadRequestError(message string) *RestErroAPI {
 	}
 }
 
+//NewInternalServerError retorno das mensages de erro conforme o padrão rest
+func NewInternalServerError(message string) *RestErroAPI {
+	return &RestErroAPI{
+		Message:    message,
+		StatusCode: http.StatusInternalServerError,
+		Error:      "internal_server_error",
+	}
+}
+
 //NewNotFoundErro retorno das mensages de erro conforme o padrão rest
 func NewNotFoundErro(message string) *RestErroAPI {
 	return &RestErroAPI{

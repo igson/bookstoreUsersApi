@@ -2,9 +2,17 @@ package users
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/igson/bookstoreUsersApi/utils/dateutils"
+
+	"github.com/igson/bookstoreUsersApi/datasources/mysql/users_db"
 
 	"github.com/igson/bookstoreUsersApi/utils/errors"
+)
+
+const (
+	queryInsertUser = "INSERT INTO users(first_name, last_name, email, date_created) VALUES (?,?,?,?);"
+	queryGetUser    = "SELECT first_name, last_name, email, date_created FROM users WHERE id = ?"
 )
 
 var (
@@ -13,15 +21,20 @@ var (
 
 //GetUser retorna usuário pelo id
 func (user *User) GetUser() *errors.RestErroAPI {
-	usuarioEncontrado := usersDB[user.ID]
-	if usuarioEncontrado == nil {
-		return errors.NewNotFoundErro(fmt.Sprintf("Usuário %d não encontado", user.ID))
+
+	query, erro := users_db.Database.Prepare(queryGetUser)
+
+	if erro != nil {
+		return errors.NewInternalServerError(erro.Error())
 	}
-	user.ID = usuarioEncontrado.ID
-	user.Email = usuarioEncontrado.Email
-	user.FirstName = usuarioEncontrado.FirstName
-	user.LastName = usuarioEncontrado.LastName
-	user.DateCreated = usuarioEncontrado.DateCreated
+
+	defer query.Close()
+
+	resultado, erro := query.QueryRow()
+
+	if erro := resultado.Scan(); erro != nil {
+
+	}
 
 	return nil
 }
@@ -29,18 +42,30 @@ func (user *User) GetUser() *errors.RestErroAPI {
 //Save cadastrar novo usuário
 func (user *User) Save() *errors.RestErroAPI {
 
-	u := usersDB[user.ID]
+	query, erro := users_db.Database.Prepare(queryInsertUser)
 
-	log.Printf("Email  %s", user.Email)
-
-	if u != nil {
-		log.Printf("Email  %s", u.Email)
-		if u.Email == user.Email {
-			fmt.Println("Email já cadastrado")
-			return errors.NewBadRequestError(fmt.Sprintf("Email %s já cadastrado", user.Email))
-		}
-		return errors.NewBadRequestError(fmt.Sprintf("User %d já existe", user.ID))
+	if erro != nil {
+		return errors.NewInternalServerError(erro.Error())
 	}
-	usersDB[user.ID] = user
+
+	defer query.Close()
+
+	user.DateCreated = dateutils.GetNowString()
+
+	resultado, erro := query.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated)
+
+	if erro != nil {
+		return errors.NewInternalServerError(fmt.Sprintf("Erro ao cadastrar usuário: %s", erro.Error()))
+	}
+
+	userID, erro := resultado.LastInsertId()
+
+	if erro != nil {
+		return errors.NewInternalServerError(fmt.Sprintf("Erro ao cadastrar usuário: %s", erro.Error()))
+	}
+
+	user.ID = userID
+
 	return nil
+
 }
