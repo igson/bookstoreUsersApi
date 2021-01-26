@@ -10,6 +10,7 @@ import (
 
 const (
 	uniqueEmailConstraint = "email_UNIQUE"
+	errorNoRows           = "no rows in result set"
 )
 
 //GetUser buscar usuario pelo ID
@@ -18,7 +19,14 @@ func GetUser(userID int64) (*users.User, *errors.RestErroAPI) {
 	user := &users.User{ID: userID}
 
 	if erro := user.GetUser(); erro != nil {
+
+		if strings.Contains(erro.Message, errorNoRows) {
+			fmt.Println(erro.Message)
+			return nil, errors.NewInternalServerError(fmt.Sprintf("Usuário %d não encontrado", user.ID))
+		}
+
 		return nil, erro
+
 	}
 
 	return user, nil
@@ -35,7 +43,8 @@ func CreateUser(user users.User) (*users.User, *errors.RestErroAPI) {
 	if erro := user.Save(); erro != nil {
 
 		if strings.Contains(erro.Message, uniqueEmailConstraint) {
-			return nil, errors.NewInternalServerError(fmt.Sprintf("Email %s já cadastrado:", user.Email))
+			fmt.Println(erro.Message)
+			return nil, errors.NewInternalServerError(fmt.Sprintf("Email %s já cadastrado.", user.Email))
 		}
 
 		return nil, erro
