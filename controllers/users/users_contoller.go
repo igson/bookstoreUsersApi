@@ -16,6 +16,27 @@ var (
 	counter int
 )
 
+// GetUser retorna o usuário pelo ID
+func GetUser(c *gin.Context) {
+
+	userID, erroID := getUserID(c.Param("user_id"))
+
+	if erroID != nil {
+		c.JSON(erroID.StatusCode, erroID)
+		return
+	}
+
+	user, erroGerUser := services.UserService.GetUser(userID)
+
+	if erroGerUser != nil {
+		c.JSON(erroGerUser.StatusCode, erroGerUser)
+		return
+	}
+
+	c.JSON(http.StatusOK, user.Marshall(c.GetHeader("X-Public") == "true"))
+
+}
+
 // CreateUser cria um novo usuário
 func CreateUser(c *gin.Context) {
 
@@ -27,40 +48,91 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	createdUser, erro := services.CreateUser(user)
+	createdUser, erro := services.UserService.CreateUser(user)
 
 	if erro != nil {
 		c.JSON(erro.StatusCode, erro)
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdUser)
+	c.JSON(http.StatusOK, createdUser.Marshall(c.GetHeader("X-Public") == "true"))
 
 }
 
-// GetUser retorna o usuário pelo ID
-func GetUser(c *gin.Context) {
+// UpdateUser realiza a atualização de dados do usuário
+func UpdateUser(c *gin.Context) {
 
-	userID, erro := strconv.ParseInt(c.Param("user_id"), 10, 64)
+	var user users.User
 
-	if erro != nil {
-		erroMessage := errors.NewBadRequestError("ID deve ser número")
+	userID, erroID := getUserID(c.Param("user_id"))
+
+	if erroID != nil {
+		c.JSON(erroID.StatusCode, erroID)
+		return
+	}
+
+	if erro := c.ShouldBindJSON(&user); erro != nil {
+		erroMessage := errors.NewBadRequestError("invalid json error body")
 		c.JSON(erroMessage.StatusCode, erroMessage)
 		return
 	}
 
-	user, erroGerUser := services.GetUser(userID)
+	user.ID = userID
 
-	if erroGerUser != nil {
-		c.JSON(erroGerUser.StatusCode, erroGerUser)
+	isPartial := c.Request.Method == http.MethodPatch
+
+	userUpdate, erroMessage := services.UserService.UpdateUser(isPartial, user)
+
+	if erroMessage != nil {
+		c.JSON(erroMessage.StatusCode, erroMessage)
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, userUpdate.Marshall(c.GetHeader("X-Public") == "true"))
 
 }
 
-// SearchUser realiza a busca de um usuário
-func SearchUser(c *gin.Context) {
-	c.String(http.StatusNotImplemented, "Implemente-me")
+// DeleteUser realiza a exclusão do usuário
+func DeleteUser(c *gin.Context) {
+
+	userID, erroID := getUserID(c.Param("user_id"))
+
+	if erroID != nil {
+		c.JSON(erroID.StatusCode, erroID)
+		return
+	}
+
+	erro := services.UserService.DeleteUser(userID)
+
+	if erro != nil {
+		c.JSON(erro.StatusCode, erro)
+		return
+	}
+
+	c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
+
+}
+
+//Search realiza consulta de usuároios
+func Search(c *gin.Context) {
+
+	status := c.Query("status")
+
+	users, erro := services.UserService.Search(status)
+
+	if erro != nil {
+		c.JSON(erro.StatusCode, erro)
+		return
+	}
+
+	c.JSON(http.StatusOK, users.Marshall(c.GetHeader("X-Public") == "true"))
+
+}
+
+func getUserID(userID string) (int64, *errors.RestErroAPI) {
+	ID, erro := strconv.ParseInt(userID, 10, 64)
+	if erro != nil {
+		return 0, errors.NewBadRequestError("ID deve ser número")
+	}
+	return ID, nil
 }
