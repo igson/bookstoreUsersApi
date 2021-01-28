@@ -59,7 +59,7 @@ func CreateUser(c *gin.Context) {
 
 }
 
-// UpdateUser realiza a atualização de dados do usuário
+// UpdateUser atualização de dados do usuário
 func UpdateUser(c *gin.Context) {
 
 	var user users.User
