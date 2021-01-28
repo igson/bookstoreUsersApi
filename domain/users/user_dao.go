@@ -2,6 +2,7 @@ package users
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/igson/bookstoreUsersApi/logger"
 	"github.com/igson/bookstoreUsersApi/utils/mysqlutils"
@@ -12,11 +13,12 @@ import (
 )
 
 const (
-	queryInsertUser = "INSERT INTO users(first_name, last_name, email, date_created, status, password) VALUES (?,?,?,?,?,?);"
-	queryGetUser    = "SELECT id, first_name, last_name, email, date_created, status FROM users WHERE id = ?"
-	queryUpdateUser = "UPDATE users set first_name=?, last_name=?, email=? WHERE id = ?"
-	queryDeleteUser = "DELETE from users WHERE id = ?"
-	queryFindUser   = "select id, first_name, last_name, email, date_created, status FROM users WHERE status=?"
+	queryInsertUser             = "INSERT INTO users(first_name, last_name, email, date_created, status, password) VALUES (?,?,?,?,?,?);"
+	queryGetUser                = "SELECT id, first_name, last_name, email, date_created, status FROM users WHERE id = ?"
+	queryUpdateUser             = "UPDATE users set first_name=?, last_name=?, email=? WHERE id = ?"
+	queryDeleteUser             = "DELETE from users WHERE id = ?"
+	queryFindUser               = "select id, first_name, last_name, email, date_created, status FROM users WHERE status=?"
+	queryFindByEmailAndPassword = "SELECT id, first_name, last_name, email, date_created, status FROM users WHERE email=? AND password=? AND status=?"
 )
 
 var (
@@ -103,7 +105,10 @@ func (user *User) Save() *errors.RestErroAPI {
 	insertResult, saveErro := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated, user.Status, user.Password)
 
 	if saveErro != nil {
-		logger.Error("Erro ao inserir usuário", erro)
+		logger.Error("Erro ao inserir usuário", saveErro)
+		if strings.Contains(saveErro.Error(), "email_UNIQUE") {
+			return errors.NewInternalServerError("Email já cadastrado")
+		}
 		return errors.NewInternalServerError("Database error")
 	}
 
@@ -160,4 +165,28 @@ func (user *User) Delete() *errors.RestErroAPI {
 
 	return nil
 
+}
+
+func (user *User) FindByEmailAndPassword() *errors.RestErroAPI {
+
+	stmt, err := users_db.Database.Prepare(queryFindByEmailAndPassword)
+
+	if err != nil {
+		logger.Error("error when trying to prepare get user by email and password statement", err)
+		return errors.NewInternalServerError("error when tying to find user")
+	}
+
+	defer stmt.Close()
+
+	result := stmt.QueryRow(user.Email, user.Password, UserStatus)
+
+	if getErr := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated, &user.Status); getErr != nil {
+		logger.Error("error when trying to get user by email and password", getErr)
+		if strings.Contains(getErr.Error(), mysqlutils.ErrorNoRows) {
+			return errors.NewNotFoundErro("Usuário ou senha inválido")
+		}
+		return errors.NewInternalServerError("error when tying to find user")
+	}
+
+	return nil
 }

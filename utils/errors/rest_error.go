@@ -1,6 +1,8 @@
 package errors
 
-import "net/http"
+import (
+	"net/http"
+)
 
 //RestErroAPI retorno das mensages de erro conforme o padrão rest
 type RestErroAPI struct {

@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	uniqueEmailConstraint = "email_UNIQUE"
-	errorNoRows           = "no rows in result set"
+	UniqueEmailConstraint = "email_UNIQUE"
+	ErrorNoRows           = "no rows in result set"
 )
 
 //ParserError parseamento de erro do Banco de Dados
@@ -18,7 +18,7 @@ func ParserError(erro error) *errors.RestErroAPI {
 	sqlErro, ok := erro.(*mysql.MySQLError)
 
 	if !ok {
-		if strings.Contains(erro.Error(), errorNoRows) {
+		if strings.Contains(erro.Error(), ErrorNoRows) {
 			return errors.NewNotFoundErro("Nenhum registro com o id fornecido")
 		}
 		return errors.NewInternalServerError("Erro parsing database response")
